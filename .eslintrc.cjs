@@ -10,6 +10,7 @@ module.exports = {
     'import/extensions': ['.js'],
   },
   rules: {
+    '@stylistic/linebreak-style': [null, 'windows'],
     'max-len': 0,
     'no-console': 0,
     'object-curly-newline': 0,
