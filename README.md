@@ -301,6 +301,7 @@ Title with background
 #### Layer type 'news-title'
 - `fontPath` - See `defaults.layer.fontPath`
 - `text`
+- `fontSize`
 - `textColor` - default `#ffffff`
 - `backgroundColor` - default `#d02a42`
 - `position` - See [Position parameter](#position-parameter)
@@ -411,6 +412,7 @@ getting all the right versions of dependencies on your system.
 $ git clone https://github.com/mifi/editly.git
 $ cd editly/examples
 $ git clone https://github.com/mifi/editly-assets.git assets
+Cloning into 'assets'...
 $ cd ..
 $ docker-compose up
 $ docker-compose run editly bash -c "cd examples && editly audio1.json5 --out /outputs/audio1.mp4"

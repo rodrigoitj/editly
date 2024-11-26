@@ -93,12 +93,14 @@ export default ({ ffmpegPath, ffprobePath, enableFfmpegLog, verbose, tmpDir }) =
 
         if (processedAudioLayers.length < 1) return createSilence();
 
-        if (processedAudioLayers.length === 1) return { clipAudioPath: processedAudioLayers[0].layerAudioPath };
+        if (processedAudioLayers.length === 1) return { clipAudioPath: processedAudioLayers[0]?.layerAudioPath };
 
         // Merge/mix all layers' audio
+        // @ts-ignore
         const weights = processedAudioLayers.map(({ audioLayer }) => (audioLayer.mixVolume != null ? audioLayer.mixVolume : 1));
         const args = [
           ...getFfmpegCommonArgs({ enableFfmpegLog }),
+          // @ts-ignore
           ...flatMap(processedAudioLayers, ({ layerAudioPath }) => ['-i', layerAudioPath]),
           '-filter_complex', `amix=inputs=${processedAudioLayers.length}:duration=longest:weights=${weights.join(' ')}`,
           '-c:a', 'flac',
@@ -113,7 +115,7 @@ export default ({ ffmpegPath, ffprobePath, enableFfmpegLog, verbose, tmpDir }) =
       const { clipAudioPath, silent } = await runInner();
 
       return {
-        path: resolve(clipAudioPath), // https://superuser.com/a/853262/658247
+        path: resolve(clipAudioPath ?? ''), // https://superuser.com/a/853262/658247
         transition,
         silent,
       };

@@ -38,9 +38,9 @@ export async function readVideoFileInfo(ffprobePath, p) {
 
   // If we can't find rotation, try side_data_list
   if (Number.isNaN(rotation) && Array.isArray(stream.side_data_list)) {
-    stream.side_data_list.forEach(element => {
+    stream.side_data_list.forEach((element) => {
       if (element.rotation) {
-       rotation = parseInt(element.rotation, 10);
+        rotation = parseInt(element.rotation, 10);
       }
     });
   }

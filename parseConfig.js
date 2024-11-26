@@ -38,11 +38,13 @@ export default async function parseConfig({ defaults: defaultsIn = {}, clips, ar
   const defaults = {
     duration: 4,
     ...defaultsIn,
+    // @ts-ignore
     transition: defaultsIn.transition === null ? null : {
       duration: 0.5,
       name: 'random',
       audioOutCurve: 'tri',
       audioInCurve: 'tri',
+      // @ts-ignore
       ...defaultsIn.transition,
     },
   };

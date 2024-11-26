@@ -100,7 +100,8 @@ export async function fillColorFrameSource({ params, width, height }) {
   async function onRender(progress, canvas) {
     const rect = new fabric.Rect({
       left: 0,
-      right: 0,
+      // right: 0,
+      // originX: 'left',
       width,
       height,
       fill: color || randomColor,
@@ -132,7 +133,8 @@ export async function radialGradientFrameSource({ width, height, params }) {
     const r2 = max * (1 + progress) * 0.6;
 
     const rect = getRekt(width, height);
-
+    rect.width = rect.width || 1;
+    rect.height = rect.height || 1;
     const cx = 0.5 * rect.width;
     const cy = 0.5 * rect.height;
 
@@ -209,7 +211,7 @@ export async function subtitleFrameSource({ width, height, params }) {
       top: height - padding,
       opacity: easedProgress,
     });
-
+    textBox.height = textBox.height || 1;
     const rect = new fabric.Rect({
       left: 0,
       width,
@@ -304,36 +306,42 @@ export async function titleFrameSource({ width, height, params }) {
 }
 
 export async function newsTitleFrameSource({ width, height, params }) {
-  const { text, textColor = '#ffffff', backgroundColor = '#d02a42', fontFamily = defaultFontFamily, delay = 0, speed = 1 } = params;
+  const { text, textColor = '#ffffff', backgroundColor = '#d02a42', fontFamily = defaultFontFamily, fontSize = 0.05, position = { x: 0, y: 0.08 }, delay = 0, speed = 1 } = params;
 
   async function onRender(progress, canvas) {
     const min = Math.min(width, height);
 
-    const fontSize = Math.round(min * 0.05);
+    const { left, top, originX, originY } = getPositionProps({ position, width, height });
+    const fromLeft = left / width < 0.5;
+    const fontSizeAbs = Math.round(min * fontSize);
 
     const easedBgProgress = easeOutExpo(Math.max(0, Math.min((progress - delay) * speed * 3, 1)));
     const easedTextProgress = easeOutExpo(Math.max(0, Math.min((progress - delay - 0.02) * speed * 4, 1)));
     const easedTextOpacityProgress = easeOutExpo(Math.max(0, Math.min((progress - delay - 0.07) * speed * 4, 1)));
-
-    const top = height * 0.08;
 
     const paddingV = 0.07 * min;
     const paddingH = 0.03 * min;
 
     const textBox = new fabric.Text(text, {
       top,
-      left: paddingV + (easedTextProgress - 1) * width,
       fill: textColor,
       opacity: easedTextOpacityProgress,
       fontFamily,
-      fontSize,
+      fontSize: fontSizeAbs,
       charSpacing: width * 0.1,
     });
+    textBox.width = textBox.width || 1;
+    if (fromLeft) {
+      textBox.set('left', left + paddingV + (easedTextProgress - 1) * width);
+    } else {
+      textBox.set('left', left - paddingV - easedTextProgress * textBox.width);
+    }
 
     const bgWidth = textBox.width + (paddingV * 2);
+    textBox.height = textBox.height || 1;
     const rect = new fabric.Rect({
       top: top - paddingH,
-      left: (easedBgProgress - 1) * bgWidth,
+      left: fromLeft ? (left + (easedBgProgress - 1) * bgWidth) : (left - (easedBgProgress * bgWidth)),
       width: bgWidth,
       height: textBox.height + (paddingH * 2),
       fill: backgroundColor,
@@ -380,6 +388,7 @@ async function getFadedObject({ object, progress }) {
   return fadedImage;
 }
 
+// @ts-ignore
 export async function slideInTextFrameSource({ width, height, params: { position, text, fontSize = 0.05, charSpacing = 0.1, color = '#ffffff', fontFamily = defaultFontFamily } = {} }) {
   async function onRender(progress, canvas) {
     const fontSizeAbs = Math.round(width * fontSize);
