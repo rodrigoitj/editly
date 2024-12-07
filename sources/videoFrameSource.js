@@ -4,16 +4,43 @@ import { fabric } from 'fabric';
 
 import { getFfmpegCommonArgs } from '../ffmpeg.js';
 import { readFileStreams } from '../util.js';
-import {
-  rgbaToFabricImage,
-  blurImage,
-} from './fabric.js';
+import { rgbaToFabricImage, blurImage } from './fabric.js';
 
-export default async ({ width: canvasWidth, height: canvasHeight, channels, framerateStr, verbose, logTimes, ffmpegPath, ffprobePath, enableFfmpegLog, params }) => {
-  const { path, cutFrom, cutTo, resizeMode = 'contain-blur', speedFactor, inputWidth, inputHeight, width: requestedWidthRel, height: requestedHeightRel, left: leftRel = 0, top: topRel = 0, originX = 'left', originY = 'top', fabricImagePostProcessing = null } = params;
+export default async ({
+  width: canvasWidth,
+  height: canvasHeight,
+  channels,
+  framerateStr,
+  verbose,
+  logTimes,
+  ffmpegPath,
+  ffprobePath,
+  enableFfmpegLog,
+  params,
+}) => {
+  const {
+    path,
+    cutFrom,
+    cutTo,
+    resizeMode = 'contain-blur',
+    speedFactor,
+    inputWidth,
+    inputHeight,
+    width: requestedWidthRel,
+    height: requestedHeightRel,
+    left: leftRel = 0,
+    top: topRel = 0,
+    originX = 'left',
+    originY = 'top',
+    fabricImagePostProcessing = null,
+  } = params;
 
-  const requestedWidth = requestedWidthRel ? Math.round(requestedWidthRel * canvasWidth) : canvasWidth;
-  const requestedHeight = requestedHeightRel ? Math.round(requestedHeightRel * canvasHeight) : canvasHeight;
+  const requestedWidth = requestedWidthRel
+    ? Math.round(requestedWidthRel * canvasWidth)
+    : canvasWidth;
+  const requestedHeight = requestedHeightRel
+    ? Math.round(requestedHeightRel * canvasHeight)
+    : canvasHeight;
 
   const left = leftRel * canvasWidth;
   const top = topRel * canvasHeight;
@@ -50,7 +77,8 @@ export default async ({ width: canvasWidth, height: canvasHeight, channels, fram
 
     // TODO improve performance by crop first, then scale?
     scaleFilter = `scale=${scaledWidth}:${scaledHeight},crop=${targetWidth}:${targetHeight}`;
-  } else { // 'stretch'
+  } else {
+    // 'stretch'
     scaleFilter = `scale=${targetWidth}:${targetHeight}`;
   }
 
@@ -87,27 +115,37 @@ export default async ({ width: canvasWidth, height: canvasHeight, channels, fram
     ...getFfmpegCommonArgs({ enableFfmpegLog }),
     ...(inputCodec ? ['-vcodec', inputCodec] : []),
     ...(cutFrom ? ['-ss', cutFrom] : []),
-    '-i', path,
+    '-i',
+    path,
     ...(cutTo ? ['-t', (cutTo - cutFrom) * speedFactor] : []),
-    '-vf', `${ptsFilter}fps=${framerateStr},${scaleFilter}`,
-    '-map', 'v:0',
-    '-vcodec', 'rawvideo',
-    '-pix_fmt', 'rgba',
-    '-f', 'image2pipe',
+    '-vf',
+    `${ptsFilter}fps=${framerateStr},${scaleFilter}`,
+    '-map',
+    'v:0',
+    '-vcodec',
+    'rawvideo',
+    '-pix_fmt',
+    'rgba',
+    '-f',
+    'image2pipe',
     '-',
   ];
   if (verbose) console.log(args.join(' '));
 
-  const ps = execa(ffmpegPath, args, { encoding: null, buffer: false, stdin: 'ignore', stdout: 'pipe', stderr: process.stderr });
+  const ps = execa(ffmpegPath, args, {
+    encoding: null,
+    buffer: false,
+    stdin: 'ignore',
+    stdout: 'pipe',
+    stderr: process.stderr,
+  });
 
   const stream = ps.stdout;
 
   let timeout;
   let ended = false;
-  stream && stream.on('data', (data) => {
-    console.log(`Received chunk ${data}`);
-  });
-  stream && stream.once('end', () => {
+
+  stream?.once('end', () => {
     clearTimeout(timeout);
     if (verbose) console.log(path, 'ffmpeg video stream ended');
     ended = true;
@@ -135,7 +173,10 @@ export default async ({ width: canvasWidth, height: canvasHeight, channels, fram
       }
 
       if (ended) {
-        console.log(path, 'Tried to read next video frame after ffmpeg video stream ended');
+        console.log(
+          path,
+          'Tried to read next video frame after ffmpeg video stream ended'
+        );
         resolve(true);
         return;
       }
@@ -160,10 +201,12 @@ export default async ({ width: canvasWidth, height: canvasHeight, channels, fram
         const out = getNextFrame();
         const restLength = chunk.length - nCopied;
         if (restLength > 0) {
-          if (verbose) console.log('Left over data', nCopied, chunk.length, restLength);
+          if (verbose)
+            console.log('Left over data', nCopied, chunk.length, restLength);
           // make sure the buffer can store all chunk data
           if (chunk.length > buf.length) {
-            if (verbose) console.log('resizing buffer', buf.length, chunk.length);
+            if (verbose)
+              console.log('resizing buffer', buf.length, chunk.length);
             const newBuf = Buffer.allocUnsafe(chunk.length);
             buf.copy(newBuf, 0, 0, length);
             buf = newBuf;
@@ -196,7 +239,11 @@ export default async ({ width: canvasWidth, height: canvasHeight, channels, fram
     assert(rgba.length === frameByteSize);
 
     if (logTimes) console.time('rgbaToFabricImage');
-    const img = await rgbaToFabricImage({ width: targetWidth, height: targetHeight, rgba });
+    const img = await rgbaToFabricImage({
+      width: targetWidth,
+      height: targetHeight,
+      rgba,
+    });
     if (logTimes) console.timeEnd('rgbaToFabricImage');
 
     img.setOptions({
@@ -220,7 +267,11 @@ export default async ({ width: canvasWidth, height: canvasHeight, channels, fram
 
     if (resizeMode === 'contain-blur') {
       const mutableImg = await new Promise((r) => img.cloneAsImage(r));
-      const blurredImg = await blurImage({ mutableImg, width: requestedWidth, height: requestedHeight });
+      const blurredImg = await blurImage({
+        mutableImg,
+        width: requestedWidth,
+        height: requestedHeight,
+      });
       blurredImg.setOptions({
         left,
         top,

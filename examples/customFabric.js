@@ -136,7 +136,7 @@ events.on('exit', (code) => {
 editly(
   {
     fast: true,
-    enableFfmpegLog: true,
+    // enableFfmpegLog: true,
     // verbose: true,
     outPath: './customFabric.mp4',
     clips: [

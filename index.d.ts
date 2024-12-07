@@ -1074,6 +1074,11 @@ declare namespace Editly {
 
   interface RenderSingleFrameConfig extends Config {
     /**
+     * Output path (`.mp4` or `.mkv`, can also be a `.gif`).
+     */
+    outPath: string;
+
+    /**
      * Timestamp to render.
      */
     time?: number;

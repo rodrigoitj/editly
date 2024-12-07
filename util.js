@@ -14,7 +14,15 @@ export function parseFps(fps) {
 }
 
 export async function readDuration(ffprobePath, p) {
-  const { stdout } = await execa(ffprobePath, ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', p]);
+  const { stdout } = await execa(ffprobePath, [
+    '-v',
+    'error',
+    '-show_entries',
+    'format=duration',
+    '-of',
+    'default=noprint_wrappers=1:nokey=1',
+    p,
+  ]);
   const parsed = parseFloat(stdout);
   assert(!Number.isNaN(parsed));
   return parsed;
@@ -22,7 +30,11 @@ export async function readDuration(ffprobePath, p) {
 
 export async function readFileStreams(ffprobePath, p) {
   const { stdout } = await execa(ffprobePath, [
-    '-show_entries', 'stream', '-of', 'json', p,
+    '-show_entries',
+    'stream',
+    '-of',
+    'json',
+    p,
   ]);
   const json = JSON.parse(stdout);
   return json.streams;
@@ -158,8 +170,14 @@ export function getFrameByKeyFrames(keyframes, progress) {
 
   if (nextKeyframe.t === prevKeyframe.t) return prevKeyframe.props;
 
-  const interProgress = (progress - prevKeyframe.t) / (nextKeyframe.t - prevKeyframe.t);
-  return Object.fromEntries(Object.entries(prevKeyframe.props).map(([propName, prevVal]) => ([propName, prevVal + ((nextKeyframe.props[propName] - prevVal) * interProgress)])));
+  const interProgress =
+    (progress - prevKeyframe.t) / (nextKeyframe.t - prevKeyframe.t);
+  return Object.fromEntries(
+    Object.entries(prevKeyframe.props).map(([propName, prevVal]) => [
+      propName,
+      prevVal + (nextKeyframe.props[propName] - prevVal) * interProgress,
+    ])
+  );
 }
 
 export const isUrl = (path) => /^https?:\/\//.test(path);
@@ -173,4 +191,8 @@ export const assertFileValid = async (path, allowRemoteRequests) => {
 };
 
 // See #16
-export const checkTransition = (transition) => assert(transition == null || typeof transition === 'object', 'Transition must be an object');
+export const checkTransition = (transition) =>
+  assert(
+    transition == null || typeof transition === 'object',
+    'Transition must be an object'
+  );

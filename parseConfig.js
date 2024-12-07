@@ -34,19 +34,31 @@ async function validateArbitraryAudio(audio, allowRemoteRequests) {
   }
 }
 
-export default async function parseConfig({ defaults: defaultsIn = {}, clips, arbitraryAudio: arbitraryAudioIn, backgroundAudioPath, backgroundAudioVolume, loopAudio, allowRemoteRequests, ffprobePath }) {
+export default async function parseConfig({
+  defaults: defaultsIn = {},
+  clips,
+  arbitraryAudio: arbitraryAudioIn,
+  backgroundAudioPath,
+  backgroundAudioVolume,
+  loopAudio,
+  allowRemoteRequests,
+  ffprobePath,
+}) {
   const defaults = {
     duration: 4,
     ...defaultsIn,
-    // @ts-ignore
-    transition: defaultsIn.transition === null ? null : {
-      duration: 0.5,
-      name: 'random',
-      audioOutCurve: 'tri',
-      audioInCurve: 'tri',
+    transition:
       // @ts-ignore
-      ...defaultsIn.transition,
-    },
+      defaultsIn.transition === null
+        ? null
+        : {
+            duration: 0.5,
+            name: 'random',
+            audioOutCurve: 'tri',
+            audioInCurve: 'tri',
+            // @ts-ignore
+            ...defaultsIn.transition,
+          },
   };
 
   async function handleLayer(layer) {
@@ -59,20 +71,42 @@ export default async function parseConfig({ defaults: defaultsIn = {}, clips, ar
       await assertFileValid(restLayer.fragmentPath, allowRemoteRequests);
     }
 
-    if (['fabric', 'canvas'].includes(type)) assert(typeof layer.func === 'function', '"func" must be a function');
+    if (['fabric', 'canvas'].includes(type))
+      assert(typeof layer.func === 'function', '"func" must be a function');
 
-    if (['image', 'image-overlay', 'fabric', 'canvas', 'gl', 'radial-gradient', 'linear-gradient', 'fill-color'].includes(type)) return layer;
+    if (
+      [
+        'image',
+        'image-overlay',
+        'fabric',
+        'canvas',
+        'gl',
+        'radial-gradient',
+        'linear-gradient',
+        'fill-color',
+      ].includes(type)
+    )
+      return layer;
 
     // TODO if random-background radial-gradient linear etc
-    if (type === 'pause') return handleLayer({ ...restLayer, type: 'fill-color' });
+    if (type === 'pause')
+      return handleLayer({ ...restLayer, type: 'fill-color' });
 
-    if (type === 'rainbow-colors') return handleLayer({ type: 'gl', fragmentPath: join(dirname, 'shaders/rainbow-colors.frag') });
+    if (type === 'rainbow-colors')
+      return handleLayer({
+        type: 'gl',
+        fragmentPath: join(dirname, 'shaders/rainbow-colors.frag'),
+      });
 
     if (type === 'editly-banner') {
       const { fontPath } = layer;
       return [
         await handleLayer({ type: 'linear-gradient' }),
-        await handleLayer({ fontPath, type: 'title', text: 'Made with\nEDITLY\nmifi.no' }),
+        await handleLayer({
+          fontPath,
+          type: 'title',
+          text: 'Made with\nEDITLY\nmifi.no',
+        }),
       ];
     }
 
@@ -81,15 +115,43 @@ export default async function parseConfig({ defaults: defaultsIn = {}, clips, ar
       const { text, textColor, background, fontFamily, fontPath } = layer;
       const outLayers = [];
       if (background) {
-        if (background.type === 'radial-gradient') outLayers.push(await handleLayer({ type: 'radial-gradient', colors: background.colors }));
-        else if (background.type === 'linear-gradient') outLayers.push(await handleLayer({ type: 'linear-gradient', colors: background.colors }));
-        else if (background.color) outLayers.push(await handleLayer({ type: 'fill-color', color: background.color }));
+        if (background.type === 'radial-gradient')
+          outLayers.push(
+            await handleLayer({
+              type: 'radial-gradient',
+              colors: background.colors,
+            })
+          );
+        else if (background.type === 'linear-gradient')
+          outLayers.push(
+            await handleLayer({
+              type: 'linear-gradient',
+              colors: background.colors,
+            })
+          );
+        else if (background.color)
+          outLayers.push(
+            await handleLayer({ type: 'fill-color', color: background.color })
+          );
       } else {
-        const backgroundTypes = ['radial-gradient', 'linear-gradient', 'fill-color'];
-        const randomType = backgroundTypes[Math.floor(Math.random() * backgroundTypes.length)];
+        const backgroundTypes = [
+          'radial-gradient',
+          'linear-gradient',
+          'fill-color',
+        ];
+        const randomType =
+          backgroundTypes[Math.floor(Math.random() * backgroundTypes.length)];
         outLayers.push(await handleLayer({ type: randomType }));
       }
-      outLayers.push(await handleLayer({ type: 'title', fontFamily, fontPath, text, textColor }));
+      outLayers.push(
+        await handleLayer({
+          type: 'title',
+          fontFamily,
+          fontPath,
+          text,
+          textColor,
+        })
+      );
       return outLayers;
     }
 
@@ -101,7 +163,11 @@ export default async function parseConfig({ defaults: defaultsIn = {}, clips, ar
       if (fontPath) {
         fontFamily = Buffer.from(basename(fontPath)).toString('base64');
         if (!loadedFonts.includes(fontFamily)) {
-          registerFont(fontPath, { family: fontFamily, weight: 'regular', style: 'normal' });
+          registerFont(fontPath, {
+            family: fontFamily,
+            weight: 'regular',
+            style: 'normal',
+          });
           loadedFonts.push(fontFamily);
         }
       }
@@ -113,136 +179,199 @@ export default async function parseConfig({ defaults: defaultsIn = {}, clips, ar
 
   const detachedAudioByClip = {};
 
-  let clipsOut = await pMap(clips, async (clip, clipIndex) => {
-    assert(typeof clip === 'object', '"clips" must contain objects with one or more layers');
-    const { transition: userTransition, duration: userClipDuration, layers: layersIn } = clip;
+  let clipsOut = await pMap(
+    clips,
+    async (clip, clipIndex) => {
+      assert(
+        typeof clip === 'object',
+        '"clips" must contain objects with one or more layers'
+      );
+      const {
+        transition: userTransition,
+        duration: userClipDuration,
+        layers: layersIn,
+      } = clip;
 
-    // Validation
-    let layers = layersIn;
-    if (!Array.isArray(layers)) layers = [layers]; // Allow single layer for convenience
-    assert(layers.every((layer) => layer != null && typeof layer === 'object'), '"clip.layers" must contain one or more objects');
-    assert(layers.every((layer) => layer.type != null), 'All "layers" must have a type');
+      // Validation
+      let layers = layersIn;
+      if (!Array.isArray(layers)) layers = [layers]; // Allow single layer for convenience
+      assert(
+        layers.every((layer) => layer != null && typeof layer === 'object'),
+        '"clip.layers" must contain one or more objects'
+      );
+      assert(
+        layers.every((layer) => layer.type != null),
+        'All "layers" must have a type'
+      );
 
-    checkTransition(userTransition);
+      checkTransition(userTransition);
 
-    const videoLayers = layers.filter((layer) => layer.type === 'video');
+      const videoLayers = layers.filter((layer) => layer.type === 'video');
 
-    const userClipDurationOrDefault = userClipDuration || defaults.duration;
-    if (videoLayers.length === 0) assert(userClipDurationOrDefault, `Duration parameter is required for videoless clip ${clipIndex}`);
+      const userClipDurationOrDefault = userClipDuration || defaults.duration;
+      if (videoLayers.length === 0)
+        assert(
+          userClipDurationOrDefault,
+          `Duration parameter is required for videoless clip ${clipIndex}`
+        );
 
-    const transition = calcTransition(defaults, userTransition, clipIndex === clips.length - 1);
+      const transition = calcTransition(
+        defaults,
+        userTransition,
+        clipIndex === clips.length - 1
+      );
 
-    let layersOut = flatMap(await pMap(layers, async (layerIn) => {
-      const globalLayerDefaults = defaults.layer || {};
-      const thisLayerDefaults = (defaults.layerType || {})[layerIn.type];
+      let layersOut = flatMap(
+        await pMap(
+          layers,
+          async (layerIn) => {
+            const globalLayerDefaults = defaults.layer || {};
+            const thisLayerDefaults = (defaults.layerType || {})[layerIn.type];
 
-      const layer = { ...globalLayerDefaults, ...thisLayerDefaults, ...layerIn };
-      const { type, path } = layer;
+            const layer = {
+              ...globalLayerDefaults,
+              ...thisLayerDefaults,
+              ...layerIn,
+            };
+            const { type, path } = layer;
 
-      if (type === 'video') {
-        const { duration: fileDuration, width: widthIn, height: heightIn, framerateStr, rotation } = await readVideoFileInfo(ffprobePath, path);
-        let { cutFrom, cutTo } = layer;
-        if (!cutFrom) cutFrom = 0;
-        cutFrom = Math.max(cutFrom, 0);
-        cutFrom = Math.min(cutFrom, fileDuration);
+            if (type === 'video') {
+              const {
+                duration: fileDuration,
+                width: widthIn,
+                height: heightIn,
+                framerateStr,
+                rotation,
+              } = await readVideoFileInfo(ffprobePath, path);
+              let { cutFrom, cutTo } = layer;
+              if (!cutFrom) cutFrom = 0;
+              cutFrom = Math.max(cutFrom, 0);
+              cutFrom = Math.min(cutFrom, fileDuration);
 
-        if (!cutTo) cutTo = fileDuration;
-        cutTo = Math.max(cutTo, cutFrom);
-        cutTo = Math.min(cutTo, fileDuration);
-        assert(cutFrom < cutTo, 'cutFrom must be lower than cutTo');
+              if (!cutTo) cutTo = fileDuration;
+              cutTo = Math.max(cutTo, cutFrom);
+              cutTo = Math.min(cutTo, fileDuration);
+              assert(cutFrom < cutTo, 'cutFrom must be lower than cutTo');
 
-        const inputDuration = cutTo - cutFrom;
+              const inputDuration = cutTo - cutFrom;
 
-        const isRotated = [-90, 90, 270, -270].includes(rotation);
-        const inputWidth = isRotated ? heightIn : widthIn;
-        const inputHeight = isRotated ? widthIn : heightIn;
+              const isRotated = [-90, 90, 270, -270].includes(rotation);
+              const inputWidth = isRotated ? heightIn : widthIn;
+              const inputHeight = isRotated ? widthIn : heightIn;
 
-        return { ...layer, cutFrom, cutTo, inputDuration, framerateStr, inputWidth, inputHeight };
-      }
+              return {
+                ...layer,
+                cutFrom,
+                cutTo,
+                inputDuration,
+                framerateStr,
+                inputWidth,
+                inputHeight,
+              };
+            }
 
-      // Audio is handled later
-      if (['audio', 'detached-audio'].includes(type)) return layer;
+            // Audio is handled later
+            if (['audio', 'detached-audio'].includes(type)) return layer;
 
-      return handleLayer(layer);
-    }, { concurrency: 1 }));
+            return handleLayer(layer);
+          },
+          { concurrency: 1 }
+        )
+      );
 
-    let clipDuration = userClipDurationOrDefault;
+      let clipDuration = userClipDurationOrDefault;
 
-    const firstVideoLayer = layersOut.find((layer) => layer.type === 'video');
-    if (firstVideoLayer && !userClipDuration) clipDuration = firstVideoLayer.inputDuration;
-    assert(clipDuration);
+      const firstVideoLayer = layersOut.find((layer) => layer.type === 'video');
+      if (firstVideoLayer && !userClipDuration)
+        clipDuration = firstVideoLayer.inputDuration;
+      assert(clipDuration);
 
-    // We need to map again, because for audio, we need to know the correct clipDuration
-    layersOut = await pMap(layersOut, async (layerIn) => {
-      const { type, path, stop, start = 0 } = layerIn;
+      // We need to map again, because for audio, we need to know the correct clipDuration
+      layersOut = await pMap(layersOut, async (layerIn) => {
+        const { type, path, stop, start = 0 } = layerIn;
 
-      // This feature allows the user to show another layer overlayed (or replacing) parts of the lower layers (start - stop)
-      const layerDuration = ((stop || clipDuration) - start);
-      assert(layerDuration > 0 && layerDuration <= clipDuration, `Invalid start ${start} or stop ${stop} (${clipDuration})`);
-      // TODO Also need to handle video layers (speedFactor etc)
-      // TODO handle audio in case of start/stop
+        // This feature allows the user to show another layer overlayed (or replacing) parts of the lower layers (start - stop)
+        const layerDuration = (stop || clipDuration) - start;
+        assert(
+          layerDuration > 0 && layerDuration <= clipDuration,
+          `Invalid start ${start} or stop ${stop} (${clipDuration})`
+        );
+        // TODO Also need to handle video layers (speedFactor etc)
+        // TODO handle audio in case of start/stop
 
-      const layer = { ...layerIn, start, layerDuration };
+        const layer = { ...layerIn, start, layerDuration };
 
-      if (type === 'audio') {
-        const { duration: fileDuration } = await readAudioFileInfo(ffprobePath, path);
-        let { cutFrom, cutTo } = layer;
+        if (type === 'audio') {
+          const { duration: fileDuration } = await readAudioFileInfo(
+            ffprobePath,
+            path
+          );
+          let { cutFrom, cutTo } = layer;
 
-        // console.log({ cutFrom, cutTo, fileDuration, clipDuration });
+          // console.log({ cutFrom, cutTo, fileDuration, clipDuration });
 
-        if (!cutFrom) cutFrom = 0;
-        cutFrom = Math.max(cutFrom, 0);
-        cutFrom = Math.min(cutFrom, fileDuration);
+          if (!cutFrom) cutFrom = 0;
+          cutFrom = Math.max(cutFrom, 0);
+          cutFrom = Math.min(cutFrom, fileDuration);
 
-        if (!cutTo) cutTo = cutFrom + clipDuration;
-        cutTo = Math.max(cutTo, cutFrom);
-        cutTo = Math.min(cutTo, fileDuration);
-        assert(cutFrom < cutTo, 'cutFrom must be lower than cutTo');
+          if (!cutTo) cutTo = cutFrom + clipDuration;
+          cutTo = Math.max(cutTo, cutFrom);
+          cutTo = Math.min(cutTo, fileDuration);
+          assert(cutFrom < cutTo, 'cutFrom must be lower than cutTo');
 
-        const inputDuration = cutTo - cutFrom;
+          const inputDuration = cutTo - cutFrom;
 
-        const speedFactor = clipDuration / inputDuration;
+          const speedFactor = clipDuration / inputDuration;
 
-        return { ...layer, cutFrom, cutTo, speedFactor };
-      }
-
-      if (type === 'video') {
-        const { inputDuration } = layer;
-
-        let speedFactor;
-
-        // If user explicitly specified duration for clip, it means that should be the output duration of the video
-        if (userClipDuration) {
-          // Later we will speed up or slow down video using this factor
-          speedFactor = userClipDuration / inputDuration;
-        } else {
-          speedFactor = 1;
+          return { ...layer, cutFrom, cutTo, speedFactor };
         }
 
-        return { ...layer, speedFactor };
-      }
+        if (type === 'video') {
+          const { inputDuration } = layer;
 
-      // These audio tracks are detached from the clips (can run over multiple clips)
-      // This is useful so we can have audio start relative to their parent clip's start time
-      if (type === 'detached-audio') {
-        const { cutFrom, cutTo, mixVolume } = layer;
-        if (!detachedAudioByClip[clipIndex]) detachedAudioByClip[clipIndex] = [];
-        detachedAudioByClip[clipIndex].push({ path, cutFrom, cutTo, mixVolume, start });
-        return undefined; // Will be filtered out
-      }
+          let speedFactor;
 
-      return layer;
-    });
+          // If user explicitly specified duration for clip, it means that should be the output duration of the video
+          if (userClipDuration) {
+            // Later we will speed up or slow down video using this factor
+            speedFactor = userClipDuration / inputDuration;
+          } else {
+            speedFactor = 1;
+          }
 
-    // Filter out deleted layers
-    layersOut = layersOut.filter((l) => l);
+          return { ...layer, speedFactor };
+        }
 
-    return {
-      transition,
-      duration: clipDuration,
-      layers: layersOut,
-    };
-  }, { concurrency: 1 });
+        // These audio tracks are detached from the clips (can run over multiple clips)
+        // This is useful so we can have audio start relative to their parent clip's start time
+        if (type === 'detached-audio') {
+          const { cutFrom, cutTo, mixVolume } = layer;
+          if (!detachedAudioByClip[clipIndex])
+            detachedAudioByClip[clipIndex] = [];
+          detachedAudioByClip[clipIndex].push({
+            path,
+            cutFrom,
+            cutTo,
+            mixVolume,
+            start,
+          });
+          return undefined; // Will be filtered out
+        }
+
+        return layer;
+      });
+
+      // Filter out deleted layers
+      layersOut = layersOut.filter((l) => l);
+
+      return {
+        transition,
+        duration: clipDuration,
+        layers: layersOut,
+      };
+    },
+    { concurrency: 1 }
+  );
 
   let totalClipDuration = 0;
   const clipDetachedAudio = [];
@@ -257,13 +386,20 @@ export default async function parseConfig({ defaults: defaultsIn = {}, clips, ar
     let safeTransitionDuration = 0;
     if (nextClip) {
       // Each clip can have two transitions, make sure we leave enough room:
-      safeTransitionDuration = Math.min(clip.duration / 2, nextClip.duration / 2, clip.transition.duration);
+      safeTransitionDuration = Math.min(
+        clip.duration / 2,
+        nextClip.duration / 2,
+        clip.transition.duration
+      );
     }
 
     // We now know all clip durations so we can calculate the offset for detached audio tracks
     // eslint-disable-next-line no-restricted-syntax
-    for (const { start, ...rest } of (detachedAudioByClip[i] || [])) {
-      clipDetachedAudio.push({ ...rest, start: totalClipDuration + (start || 0) });
+    for (const { start, ...rest } of detachedAudioByClip[i] || []) {
+      clipDetachedAudio.push({
+        ...rest,
+        start: totalClipDuration + (start || 0),
+      });
     }
 
     totalClipDuration += clip.duration - safeTransitionDuration;
@@ -280,7 +416,16 @@ export default async function parseConfig({ defaults: defaultsIn = {}, clips, ar
   // Audio can either come from `audioFilePath`, `audio` or from "detached" audio layers from clips
   const arbitraryAudio = [
     // Background audio is treated just like arbitrary audio
-    ...(backgroundAudioPath ? [{ path: backgroundAudioPath, mixVolume: backgroundAudioVolume != null ? backgroundAudioVolume : 1, loop: loopAudio ? -1 : 0 }] : []),
+    ...(backgroundAudioPath
+      ? [
+          {
+            path: backgroundAudioPath,
+            mixVolume:
+              backgroundAudioVolume != null ? backgroundAudioVolume : 1,
+            loop: loopAudio ? -1 : 0,
+          },
+        ]
+      : []),
     ...arbitraryAudioIn,
     ...clipDetachedAudio,
   ];

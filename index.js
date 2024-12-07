@@ -309,28 +309,21 @@ async function Editly(config = {}, /** @type {EventEmitter?} */ events = null) {
       '-y',
       outPath,
     ];
-    if (verbose) console.log('ffmpeg', args.join(' '));
-    const { stdout } = execa(ffmpegPath, args, {
-      // const exe = execa(ffmpegPath, args, {
+    const outProcess = execa(ffmpegPath, args, {
       // encoding: null,
       buffer: false,
       stdin: 'pipe',
       stdout: process.stdout,
       stderr: process.stderr,
     });
-
-    stdout &&
+    outProcess.stdout &&
       // @ts-ignore
-      stdout.on('data', (data) => {
+      outProcess.stdout.on('data', (data) => {
         events && events.emit('data', data);
       });
-    return execa(ffmpegPath, args, {
-      // encoding: null,
-      buffer: false,
-      stdin: 'pipe',
-      stdout: process.stdout,
-      stderr: process.stderr,
-    });
+
+    if (verbose) console.log('ffmpeg', args.join(' '));
+    return outProcess;
   }
 
   let outProcess;
@@ -504,7 +497,6 @@ async function Editly(config = {}, /** @type {EventEmitter?} */ events = null) {
             const easedProgress = currentTransition.easingFunction(progress);
 
             if (logTimes) console.time('runTransitionOnFrame');
-            // @ts-ignore
             outFrameData = runTransitionOnFrame({
               fromFrame: frameSource1Data,
               toFrame: frameSource2Data,
@@ -584,7 +576,6 @@ async function Editly(config = {}, /** @type {EventEmitter?} */ events = null) {
     try {
       if (verbose) console.log('Waiting for output ffmpeg process to finish');
       await outProcess;
-      outProcess.killed;
     } catch (err) {
       if (outProcessExitCode !== 0 && !err.killed) throw err;
     }
@@ -598,9 +589,6 @@ async function Editly(config = {}, /** @type {EventEmitter?} */ events = null) {
   } else {
     events.emit('end', 'Done. Output file can be found at: ' + outPath);
   }
-}
-function sleep(ms = 1000) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // Pure function to get a frame at a certain time

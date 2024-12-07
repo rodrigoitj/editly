@@ -15,7 +15,7 @@
     "canvas": "^2.11.2",
     "chalk": "^5.3.0",
     "compare-versions": "6.1.1",
-    "execa": "9.5.1",
+    "execa": "^6.1.0",
     "fabric": "^5.2.4",
     "file-type": "19.6.0",
     "file-url": "^4.0.0",
