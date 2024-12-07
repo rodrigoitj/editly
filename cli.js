@@ -1,6 +1,8 @@
 #!/usr/bin/env node
+
 import meow from 'meow';
 import { readFileSync } from 'fs';
+// @ts-ignore
 import { fileTypeFromFile } from 'file-type';
 import pMap from 'p-map';
 import JSON5 from 'json5';
@@ -9,7 +11,8 @@ import assert from 'assert';
 import Editly from './index.js';
 
 // See also readme
-const cli = meow(`
+const cli = meow(
+  `
   Usage
     $ editly CLIP1 [CLIP2 [CLIP3 ...]]
     where each CLIP can be one of the following:
@@ -46,70 +49,97 @@ const cli = meow(`
   Examples
     $ editly title:'My video' clip1.mov clip2.mov title:'My slideshow' img1.jpg img2.jpg title:'THE END' --audio-file-path /path/to/music.mp3 --font-path /path/to/my-favorite-font.ttf
     $ editly my-editly.json5 --out output.gif
-`, {
-  importMeta: import.meta,
-  flags: {
-    verbose: { type: 'boolean', alias: 'v' },
-    keepSourceAudio: { type: 'boolean' },
-    allowRemoteRequests: { type: 'boolean' },
-    fast: { type: 'boolean', alias: 'f' },
-    transitionDuration: { type: 'number' },
-    clipDuration: { type: 'number' },
-    width: { type: 'number' },
-    height: { type: 'number' },
-    fps: { type: 'number' },
-    loopAudio: { type: 'boolean' },
-    outputVolume: { type: 'string' },
-  },
-});
+`,
+  {
+    importMeta: import.meta,
+    flags: {
+      verbose: { type: 'boolean', alias: 'v' },
+      keepSourceAudio: { type: 'boolean' },
+      allowRemoteRequests: { type: 'boolean' },
+      fast: { type: 'boolean', alias: 'f' },
+      transitionDuration: { type: 'number' },
+      clipDuration: { type: 'number' },
+      width: { type: 'number' },
+      height: { type: 'number' },
+      fps: { type: 'number' },
+      loopAudio: { type: 'boolean' },
+      outputVolume: { type: 'string' },
+    },
+  }
+);
 
 (async () => {
   let { json } = cli.flags;
   // eslint-disable-next-line prefer-destructuring
-  if (cli.input.length === 1 && /\.(json|json5|js)$/.test(cli.input[0].toLowerCase())) json = cli.input[0];
-
+  if (
+    cli.input.length === 1 &&
+    /\.(json|json5|js)$/.test(cli.input[0].toLowerCase())
+  )
+    json = cli.input[0];
   let params = {
     defaults: {},
   };
 
   if (json) {
+    // @ts-ignore
     params = JSON5.parse(readFileSync(json, 'utf-8'));
   } else {
     const clipsIn = cli.input;
     if (clipsIn.length < 1) cli.showHelp();
 
-    const clips = await pMap(clipsIn, async (clip) => {
-      let match = clip.match(/^title:(.+)$/);
-      if (match) return { type: 'title-background', text: match[1] };
+    const clips = await pMap(
+      clipsIn,
+      async (clip) => {
+        let match = clip.match(/^title:(.+)$/);
+        if (match) return { type: 'title-background', text: match[1] };
 
-      match = clip.match(/^https?:\/\/.*\.(jpg|jpeg|png|webp|gif|svg)$/); // todo improve
-      if (match) return { type: 'image', path: clip };
+        match = clip.match(/^https?:\/\/.*\.(jpg|jpeg|png|webp|gif|svg)$/); // todo improve
+        if (match) return { type: 'image', path: clip };
 
-      const fileType = await fileTypeFromFile(clip);
-      if (!fileType) {
-        console.error('Invalid file for clip', clip);
-        cli.showHelp();
-      }
+        const fileType = await fileTypeFromFile(clip);
+        if (!fileType) {
+          console.error('Invalid file for clip', clip);
+          cli.showHelp();
+        }
 
-      const { mime } = fileType;
+        const { mime } = fileType;
 
-      if (mime.startsWith('video')) return { type: 'video', path: clip };
-      if (mime.startsWith('image')) return { type: 'image', path: clip };
+        if (mime.startsWith('video')) return { type: 'video', path: clip };
+        if (mime.startsWith('image')) return { type: 'image', path: clip };
 
-      throw new Error(`Unrecognized clip or file type "${clip}"`);
-    }, { concurrency: 1 });
+        throw new Error(`Unrecognized clip or file type "${clip}"`);
+      },
+      { concurrency: 1 }
+    );
 
     assert(clips.length > 0, 'No clips specified');
 
     params.clips = clips.map((clip) => ({ layers: [clip] }));
   }
 
-  const { verbose, transitionName, transitionDuration, clipDuration, width, height, fps, audioFilePath, fontPath, fast, out: outPath, keepSourceAudio, loopAudio, outputVolume, allowRemoteRequests } = cli.flags;
+  const {
+    verbose,
+    transitionName,
+    transitionDuration,
+    clipDuration,
+    width,
+    height,
+    fps,
+    audioFilePath,
+    fontPath,
+    fast,
+    out: outPath,
+    keepSourceAudio,
+    loopAudio,
+    outputVolume,
+    allowRemoteRequests,
+  } = cli.flags;
 
   if (transitionName || transitionDuration != null) {
     params.defaults.transition = {};
     if (transitionName) params.defaults.transition.name = transitionName;
-    if (transitionDuration) params.defaults.transition.duration = transitionDuration;
+    if (transitionDuration)
+      params.defaults.transition.duration = transitionDuration;
   }
 
   if (clipDuration) params.defaults.duration = clipDuration;
@@ -137,6 +167,7 @@ const cli = meow(`
 
   if (!params.outPath) params.outPath = './editly-out.mp4';
 
+  // @ts-ignore
   await Editly(params);
 })().catch((err) => {
   console.error('Caught error', err);

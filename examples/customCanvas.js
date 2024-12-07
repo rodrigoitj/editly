@@ -1,4 +1,4 @@
-import editly from '..';
+import editly from '../index.js';
 
 async function func({ canvas }) {
   async function onRender(progress) {
@@ -28,10 +28,9 @@ editly({
   // outPath: './customCanvas.mp4',
   outPath: './customCanvas.gif',
   clips: [
-    { duration: 2,
-      layers: [
-        { type: 'rainbow-colors' },
-        { type: 'canvas', func },
-      ] },
+    {
+      duration: 2,
+      layers: [{ type: 'rainbow-colors' }, { type: 'canvas', func }],
+    },
   ],
 }).catch(console.error);

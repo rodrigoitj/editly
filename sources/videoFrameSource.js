@@ -104,8 +104,10 @@ export default async ({ width: canvasWidth, height: canvasHeight, channels, fram
 
   let timeout;
   let ended = false;
-
-  stream.once('end', () => {
+  stream && stream.on('data', (data) => {
+    console.log(`Received chunk ${data}`);
+  });
+  stream && stream.once('end', () => {
     clearTimeout(timeout);
     if (verbose) console.log(path, 'ffmpeg video stream ended');
     ended = true;
@@ -134,21 +136,21 @@ export default async ({ width: canvasWidth, height: canvasHeight, channels, fram
 
       if (ended) {
         console.log(path, 'Tried to read next video frame after ffmpeg video stream ended');
-        resolve();
+        resolve(true);
         return;
       }
       // console.log('Reading new frame', path);
 
       function onEnd() {
-        resolve();
+        resolve(true);
       }
 
       function cleanup() {
-        stream.pause();
+        stream?.pause();
         // eslint-disable-next-line no-use-before-define
-        stream.removeListener('data', handleChunk);
-        stream.removeListener('end', onEnd);
-        stream.removeListener('error', reject);
+        stream?.removeListener('data', handleChunk);
+        stream?.removeListener('end', onEnd);
+        stream?.removeListener('error', reject);
       }
 
       function handleChunk(chunk) {
@@ -180,13 +182,13 @@ export default async ({ width: canvasWidth, height: canvasHeight, channels, fram
       timeout = setTimeout(() => {
         console.warn('Timeout on read video frame');
         cleanup();
-        resolve();
+        resolve(true);
       }, 60000);
 
-      stream.on('data', handleChunk);
-      stream.on('end', onEnd);
-      stream.on('error', reject);
-      stream.resume();
+      stream?.on('data', handleChunk);
+      stream?.on('end', onEnd);
+      stream?.on('error', reject);
+      stream?.resume();
     });
 
     if (!rgba) return;

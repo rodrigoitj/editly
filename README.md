@@ -1,4 +1,4 @@
-![](logo.png)
+# ![Editly](logo.png)
 
 [![Discord](https://img.shields.io/discord/986052452245700659)](https://discord.gg/P3u6zKbDK7) [![NPM version](https://img.shields.io/npm/v/editly.svg?style=flat-square)](https://npmjs.org/package/editly) ![Build status](https://github.com/mifi/editly/actions/workflows/test.yml/badge.svg) [![PayPal](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://paypal.me/mifino/usd)
 
@@ -232,7 +232,6 @@ For video layers, if parent `clip.duration` is specified, the video will be slow
 | `originY` | Y anchor | `top` | `top` or `bottom` |
 | `mixVolume` | Relative volume when mixing this video's audio track with others | `1` | |
 
-
 #### Layer type 'audio'
 
 Audio layers will be mixed together. If `cutFrom`/`cutTo` is set, the resulting segment (`cutTo`-`cutFrom`) will be slowed/sped-up to fit `clip.duration`. The slow down/speed-up operation is limited to values between `0.5x` and `100x`.
@@ -277,6 +276,7 @@ Image overlay with a custom position and size on the screen. NOTE: If you want t
 See also [Ken Burns parameters](#ken-burns-parameters).
 
 #### Layer type 'title'
+
 - `fontPath` - See `defaults.layer.fontPath`
 - `text` - Title text to show, keep it short
 - `textColor` - default `#ffffff`
@@ -285,6 +285,7 @@ See also [Ken Burns parameters](#ken-burns-parameters).
 See also [Ken Burns parameters](#ken-burns-parameters)
 
 #### Layer type 'subtitle'
+
 - `fontPath` - See `defaults.layer.fontPath`
 - `text` - Subtitle text to show
 - `textColor` - default `#ffffff`
@@ -299,6 +300,7 @@ Title with background
 - `fontPath` - See type `title`
 
 #### Layer type 'news-title'
+
 - `fontPath` - See `defaults.layer.fontPath`
 - `text`
 - `fontSize`
@@ -307,6 +309,7 @@ Title with background
 - `position` - See [Position parameter](#position-parameter)
 
 #### Layer type 'slide-in-text'
+
 - `fontPath` - See `defaults.layer.fontPath`
 - `text`
 - `fontSize`
@@ -315,12 +318,15 @@ Title with background
 - `position` - See [Position parameter](#position-parameter)
 
 #### Layer type 'fill-color', 'pause'
+
 - `color` - Color to fill background, default: randomize
 
 #### Layer type 'radial-gradient'
+
 - `colors` - Array of two colors, default: randomize
 
 #### Layer type 'linear-gradient'
+
 - `colors` - Array of two colors, default: randomize
 
 #### Layer type 'rainbow-colors'
@@ -375,6 +381,7 @@ You can enable audio normalization of the final output audio. This is useful if 
 ### Resize modes
 
 `resizeMode` - How to fit image to screen. Can be one of:
+
 - `contain` - All the video will be contained within the frame and letterboxed
 - `contain-blur` - Like `contain`, but with a blurred copy as the letterbox
 - `cover` - Video be cropped to cover the whole screen (aspect ratio preserved)
@@ -383,6 +390,7 @@ You can enable audio normalization of the final output audio. This is useful if 
 Default `contain-blur`.
 
 See:
+
 - [image.json5](examples/image.json5)
 - [videos.json5](examples/videos.json5)
 
@@ -391,8 +399,9 @@ See:
 Certain layers support the position parameter
 
 `position` can be one of either:
-  - `top`, `bottom` `center`, `top-left`, `top-right`, `center-left`, `center-right`, `bottom-left`, `bottom-right`
-  - An object `{ x, y, originX = 'left', originY = 'top' }`, where `{ x: 0, y: 0 }` is the upper left corner of the screen, and `{ x: 1, y: 1 }` is the lower right corner, `x` is relative to video width, `y` to video height. `originX` and `originY` are optional, and specify the position's origin (anchor position) of the object.
+
+- `top`, `bottom` `center`, `top-left`, `top-right`, `center-left`, `center-right`, `bottom-left`, `bottom-right`
+- An object `{ x, y, originX = 'left', originY = 'top' }`, where `{ x: 0, y: 0 }` is the upper left corner of the screen, and `{ x: 1, y: 1 }` is the lower right corner, `x` is relative to video width, `y` to video height. `originX` and `originY` are optional, and specify the position's origin (anchor position) of the object.
 
 See [position.json5](examples/position.json5)
 
@@ -442,22 +451,22 @@ This package would not exist without the support and help from all the contribut
 
 ## See also
 
-- https://github.com/mifi/reactive-video - React based alternative to editly
-- https://github.com/JonnyBurger/remotion - React based alternative to editly (not open source)
-- https://github.com/pankod/canvas2video - Similar project based on Cairo
-- https://github.com/h2non/videoshow - Inspired editly
-- https://github.com/transitive-bullshit/ffmpeg-concat - Inspired editly
-- http://www.quasimondo.com/BoxBlurForCanvas/FastBlurDemo.html - Fast blur effect used in editly
-- https://github.com/transitive-bullshit/awesome-ffmpeg
-- https://github.com/sjfricke/awesome-webgl
-- https://www.mltframework.org/docs/melt/
+- <https://github.com/mifi/reactive-video> - React based alternative to editly
+- <https://github.com/JonnyBurger/remotion> - React based alternative to editly (not open source)
+- <https://github.com/pankod/canvas2video> - Similar project based on Cairo
+- <https://github.com/h2non/videoshow> - Inspired editly
+- <https://github.com/transitive-bullshit/ffmpeg-concat> - Inspired editly
+- <http://www.quasimondo.com/BoxBlurForCanvas/FastBlurDemo.html> - Fast blur effect used in editly
+- <https://github.com/transitive-bullshit/awesome-ffmpeg>
+- <https://github.com/sjfricke/awesome-webgl>
+- <https://www.mltframework.org/docs/melt/>
 - Icon made by [Freepik](https://www.flaticon.com/authors/freepik) from [www.flaticon.com](https://www.flaticon.com/)
 
 ## Videos made by you
 
 Submit a PR if you want to share your videos or project created with editly here.
 
-- https://www.youtube.com/channel/UCDUauYxuY5Cv1Z6AuD3UGDw?view_as=subscriber
+- <https://www.youtube.com/channel/UCDUauYxuY5Cv1Z6AuD3UGDw?view_as=subscriber>
 
 ---
 

@@ -58,7 +58,8 @@ export async function imageFrameSource({ verbose, params, width, height }) {
 
     const scaleFactor = getZoomParams({ progress, zoomDirection, zoomAmount });
     const translationParams = getTranslationParams({ progress, zoomDirection, zoomAmount });
-
+    img.width = img.width || 1;
+    img.height = img.height || 1;
     const ratioW = width / img.width;
     const ratioH = height / img.height;
 

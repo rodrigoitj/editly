@@ -6,16 +6,26 @@ import fsExtra from 'fs-extra';
 import { nanoid } from 'nanoid';
 
 import { testFf } from './ffmpeg.js';
-import { parseFps, multipleOf2, assertFileValid, checkTransition } from './util.js';
-import { createFabricCanvas, rgbaToFabricImage, getNodeCanvasFromFabricCanvas } from './sources/fabric.js';
+import {
+  parseFps,
+  multipleOf2,
+  assertFileValid,
+  checkTransition,
+} from './util.js';
+import {
+  createFabricCanvas,
+  rgbaToFabricImage,
+  getNodeCanvasFromFabricCanvas,
+} from './sources/fabric.js';
 import { createFrameSource } from './sources/frameSource.js';
 import parseConfig from './parseConfig.js';
 import GlTransitions from './glTransitions.js';
 import Audio from './audio.js';
+import EventEmitter from 'node:events';
 
 const channels = 4;
 
-async function Editly(config = {}) {
+async function Editly(config = {}, /** @type {EventEmitter?} */ events = null) {
   const {
     // Testing options:
     enableFfmpegLog = false,
@@ -50,7 +60,8 @@ async function Editly(config = {}) {
 
   const isGif = outPath.toLowerCase().endsWith('.gif');
 
-  if (backgroundAudioPath) await assertFileValid(backgroundAudioPath, allowRemoteRequests);
+  if (backgroundAudioPath)
+    await assertFileValid(backgroundAudioPath, allowRemoteRequests);
 
   checkTransition(defaults.transition);
 
@@ -59,33 +70,65 @@ async function Editly(config = {}) {
   assert(outPath, 'Please provide an output path');
   assert(clipsIn.length > 0, 'Please provide at least 1 clip');
 
-  const { clips, arbitraryAudio } = await parseConfig({ defaults, clips: clipsIn, arbitraryAudio: arbitraryAudioIn, backgroundAudioPath, backgroundAudioVolume, loopAudio, allowRemoteRequests, ffprobePath });
-  if (verbose) console.log('Calculated', JSON5.stringify({ clips, arbitraryAudio }, null, 2));
+  const { clips, arbitraryAudio } = await parseConfig({
+    defaults,
+    clips: clipsIn,
+    arbitraryAudio: arbitraryAudioIn,
+    backgroundAudioPath,
+    backgroundAudioVolume,
+    loopAudio,
+    allowRemoteRequests,
+    ffprobePath,
+  });
+  if (verbose)
+    console.log(
+      'Calculated',
+      JSON5.stringify({ clips, arbitraryAudio }, null, 2)
+    );
 
   const outDir = dirname(outPath);
   const tmpDir = join(outDir, `editly-tmp-${nanoid()}`);
   if (verbose) console.log({ tmpDir });
   await fsExtra.mkdirp(tmpDir);
 
-  const { editAudio } = Audio({ ffmpegPath, ffprobePath, enableFfmpegLog, verbose, tmpDir });
+  const { editAudio } = Audio({
+    ffmpegPath,
+    ffprobePath,
+    enableFfmpegLog,
+    verbose,
+    tmpDir,
+  });
 
-  const audioFilePath = !isGif ? await editAudio({ keepSourceAudio, arbitraryAudio, clipsAudioVolume, clips, audioNorm, outputVolume }) : undefined;
+  const audioFilePath = !isGif
+    ? await editAudio({
+        keepSourceAudio,
+        arbitraryAudio,
+        clipsAudioVolume,
+        clips,
+        audioNorm,
+        outputVolume,
+      })
+    : undefined;
 
   // Try to detect parameters from first video
   let firstVideoWidth;
   let firstVideoHeight;
   let firstVideoFramerateStr;
 
-  clips.find((clip) => clip && clip.layers.find((layer) => {
-    if (layer.type === 'video') {
-      firstVideoWidth = layer.inputWidth;
-      firstVideoHeight = layer.inputHeight;
-      firstVideoFramerateStr = layer.framerateStr;
+  clips.find(
+    (clip) =>
+      clip &&
+      clip.layers.find((layer) => {
+        if (layer.type === 'video') {
+          firstVideoWidth = layer.inputWidth;
+          firstVideoHeight = layer.inputHeight;
+          firstVideoFramerateStr = layer.framerateStr;
 
-      return true;
-    }
-    return false;
-  }));
+          return true;
+        }
+        return false;
+      })
+  );
 
   let width;
   let height;
@@ -99,7 +142,8 @@ async function Editly(config = {}) {
 
   if (firstVideoWidth && firstVideoHeight) {
     if (desiredWidth) {
-      const calculatedHeight = (firstVideoHeight / firstVideoWidth) * desiredWidth;
+      const calculatedHeight =
+        (firstVideoHeight / firstVideoWidth) * desiredWidth;
       height = roundDimension(calculatedHeight);
       width = desiredWidth;
     } else {
@@ -126,7 +170,9 @@ async function Editly(config = {}) {
     const numPixelsEachDirection = 250;
     const aspectRatio = width / height;
     width = roundDimension(numPixelsEachDirection * Math.sqrt(aspectRatio));
-    height = roundDimension(numPixelsEachDirection * Math.sqrt(1 / aspectRatio));
+    height = roundDimension(
+      numPixelsEachDirection * Math.sqrt(1 / aspectRatio)
+    );
   }
 
   assert(width, 'Width not specified or detected');
@@ -160,44 +206,78 @@ async function Editly(config = {}) {
 
   assert(fps, 'FPS not specified or detected');
 
-  console.log(`${width}x${height} ${fps}fps`);
+  !events
+    ? console.log(`${width}x${height} ${fps}fps`)
+    : events.emit('data', `${width}x${height} ${fps}fps`);
 
-  const estimatedTotalFrames = fps * clips.reduce((acc, c, i) => {
-    let newAcc = acc + c.duration;
-    if (i !== clips.length - 1) newAcc -= c.transition.duration;
-    return newAcc;
-  }, 0);
+  const estimatedTotalFrames =
+    fps *
+    clips.reduce((acc, c, i) => {
+      let newAcc = acc + c.duration;
+      if (i !== clips.length - 1) newAcc -= c.transition.duration;
+      return newAcc;
+    }, 0);
 
-  const { runTransitionOnFrame: runGlTransitionOnFrame } = GlTransitions({ width, height, channels });
+  const { runTransitionOnFrame: runGlTransitionOnFrame } = GlTransitions({
+    width,
+    height,
+    channels,
+  });
 
-  function runTransitionOnFrame({ fromFrame, toFrame, progress, transitionName, transitionParams }) {
+  function runTransitionOnFrame({
+    fromFrame,
+    toFrame,
+    progress,
+    transitionName,
+    transitionParams,
+  }) {
     // A dummy transition can be used to have an audio transition without a video transition
     // (Note: You will lose a portion from both clips due to overlap)
     if (transitionName === 'dummy') return progress > 0.5 ? toFrame : fromFrame;
-    return runGlTransitionOnFrame({ fromFrame, toFrame, progress, transitionName, transitionParams });
+    return runGlTransitionOnFrame({
+      fromFrame,
+      toFrame,
+      progress,
+      transitionName,
+      transitionParams,
+    });
   }
 
   function getOutputArgs() {
     if (customOutputArgs) {
-      assert(Array.isArray(customOutputArgs), 'customOutputArgs must be an array of arguments');
+      assert(
+        Array.isArray(customOutputArgs),
+        'customOutputArgs must be an array of arguments'
+      );
       return customOutputArgs;
     }
 
     // https://superuser.com/questions/556029/how-do-i-convert-a-video-to-gif-using-ffmpeg-with-reasonable-quality
-    const videoOutputArgs = isGif ? [
-      '-vf', `format=rgb24,fps=${fps},scale=${width}:${height}:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse`,
-      '-loop', 0,
-    ] : [
-      '-vf', 'format=yuv420p',
-      '-vcodec', 'libx264',
-      '-profile:v', 'high',
-      ...(fast ? ['-preset:v', 'ultrafast'] : ['-preset:v', 'medium']),
-      '-crf', '18',
+    const videoOutputArgs = isGif
+      ? [
+          '-vf',
+          `format=rgb24,fps=${fps},scale=${width}:${height}:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse`,
+          '-loop',
+          0,
+        ]
+      : [
+          '-vf',
+          'format=yuv420p',
+          '-vcodec',
+          'libx264',
+          '-profile:v',
+          'high',
+          ...(fast ? ['-preset:v', 'ultrafast'] : ['-preset:v', 'medium']),
+          '-crf',
+          '18',
 
-      '-movflags', 'faststart',
-    ];
+          '-movflags',
+          'faststart',
+        ];
 
-    const audioOutputArgs = audioFilePath ? ['-acodec', 'aac', '-b:a', '128k'] : [];
+    const audioOutputArgs = audioFilePath
+      ? ['-acodec', 'aac', '-b:a', '128k']
+      : [];
 
     return [...audioOutputArgs, ...videoOutputArgs];
   }
@@ -206,12 +286,18 @@ async function Editly(config = {}) {
     const args = [
       ...(enableFfmpegLog ? [] : ['-hide_banner', '-loglevel', 'error']),
 
-      '-f', 'rawvideo',
-      '-vcodec', 'rawvideo',
-      '-pix_fmt', 'rgba',
-      '-s', `${width}x${height}`,
-      '-r', framerateStr,
-      '-i', '-',
+      '-f',
+      'rawvideo',
+      '-vcodec',
+      'rawvideo',
+      '-pix_fmt',
+      'rgba',
+      '-s',
+      `${width}x${height}`,
+      '-r',
+      framerateStr,
+      '-i',
+      '-',
 
       ...(audioFilePath ? ['-i', audioFilePath] : []),
 
@@ -220,10 +306,31 @@ async function Editly(config = {}) {
 
       ...getOutputArgs(),
 
-      '-y', outPath,
+      '-y',
+      outPath,
     ];
     if (verbose) console.log('ffmpeg', args.join(' '));
-    return execa(ffmpegPath, args, { encoding: null, buffer: false, stdin: 'pipe', stdout: process.stdout, stderr: process.stderr });
+    const { stdout } = execa(ffmpegPath, args, {
+      // const exe = execa(ffmpegPath, args, {
+      // encoding: null,
+      buffer: false,
+      stdin: 'pipe',
+      stdout: process.stdout,
+      stderr: process.stderr,
+    });
+
+    stdout &&
+      // @ts-ignore
+      stdout.on('data', (data) => {
+        events && events.emit('data', data);
+      });
+    return execa(ffmpegPath, args, {
+      // encoding: null,
+      buffer: false,
+      stdin: 'pipe',
+      stdout: process.stdout,
+      stderr: process.stderr,
+    });
   }
 
   let outProcess;
@@ -244,9 +351,25 @@ async function Editly(config = {}) {
   const getTransitionFromClip = () => clips[transitionFromClipId];
   const getTransitionToClip = () => clips[getTransitionToClipId()];
 
-  const getSource = async (clip, clipIndex) => createFrameSource({ clip, clipIndex, width, height, channels, verbose, logTimes, ffmpegPath, ffprobePath, enableFfmpegLog, framerateStr });
-  const getTransitionFromSource = async () => getSource(getTransitionFromClip(), transitionFromClipId);
-  const getTransitionToSource = async () => (getTransitionToClip() && getSource(getTransitionToClip(), getTransitionToClipId()));
+  const getSource = async (clip, clipIndex) =>
+    createFrameSource({
+      clip,
+      clipIndex,
+      width,
+      height,
+      channels,
+      verbose,
+      logTimes,
+      ffmpegPath,
+      ffprobePath,
+      enableFfmpegLog,
+      framerateStr,
+    });
+  const getTransitionFromSource = async () =>
+    getSource(getTransitionFromClip(), transitionFromClipId);
+  const getTransitionToSource = async () =>
+    getTransitionToClip() &&
+    getSource(getTransitionToClip(), getTransitionToClipId());
 
   try {
     try {
@@ -257,41 +380,71 @@ async function Editly(config = {}) {
       outProcess.on('exit', (code) => {
         if (verbose) console.log('Output ffmpeg exited', code);
         outProcessExitCode = code;
+        events?.emit('exit', code);
       });
 
       // If we write and get an EPIPE (like when ffmpeg fails or is finished), we could get an unhandled rejection if we don't catch the promise
       // (and meow causes the CLI to exit on unhandled rejections making it hard to see)
       outProcess.catch((err) => {
         outProcessError = err;
+        events?.emit('exit', err);
       });
 
       frameSource1 = await getTransitionFromSource();
       frameSource2 = await getTransitionToSource();
 
-      // eslint-disable-next-line no-constant-condition
       while (true) {
         const transitionToClip = getTransitionToClip();
         const transitionFromClip = getTransitionFromClip();
         const fromClipNumFrames = Math.round(transitionFromClip.duration * fps);
-        const toClipNumFrames = transitionToClip && Math.round(transitionToClip.duration * fps);
+        const toClipNumFrames =
+          transitionToClip && Math.round(transitionToClip.duration * fps);
         const fromClipProgress = fromClipFrameAt / fromClipNumFrames;
-        const toClipProgress = transitionToClip && toClipFrameAt / toClipNumFrames;
+        const toClipProgress =
+          transitionToClip && toClipFrameAt / toClipNumFrames;
         const fromClipTime = transitionFromClip.duration * fromClipProgress;
-        const toClipTime = transitionToClip && transitionToClip.duration * toClipProgress;
+        const toClipTime =
+          transitionToClip && transitionToClip.duration * toClipProgress;
 
         const currentTransition = transitionFromClip.transition;
 
-        const transitionNumFrames = Math.round(currentTransition.duration * fps);
+        const transitionNumFrames = Math.round(
+          currentTransition.duration * fps
+        );
 
         // Each clip has two transitions, make sure we leave enough room:
-        const transitionNumFramesSafe = Math.floor(Math.min(Math.min(fromClipNumFrames, toClipNumFrames != null ? toClipNumFrames : Number.MAX_SAFE_INTEGER) / 2, transitionNumFrames));
+        const transitionNumFramesSafe = Math.floor(
+          Math.min(
+            Math.min(
+              fromClipNumFrames,
+              toClipNumFrames != null
+                ? toClipNumFrames
+                : Number.MAX_SAFE_INTEGER
+            ) / 2,
+            transitionNumFrames
+          )
+        );
         // How many frames into the transition are we? negative means not yet started
-        const transitionFrameAt = fromClipFrameAt - (fromClipNumFrames - transitionNumFramesSafe);
+        const transitionFrameAt =
+          fromClipFrameAt - (fromClipNumFrames - transitionNumFramesSafe);
 
-        if (!verbose) {
-          const percentDone = Math.floor(100 * (totalFramesWritten / estimatedTotalFrames));
-          if (totalFramesWritten % 10 === 0) process.stdout.write(`${String(percentDone).padStart(3, ' ')}% `);
+        // if (!verbose) {
+        const percentDone = Math.floor(
+          100 * (totalFramesWritten / estimatedTotalFrames)
+        );
+        if (totalFramesWritten % 10 === 0) {
+          !events
+            ? process.stdout.write(`${String(percentDone).padStart(3, ' ')}%`)
+            : events?.emit('progress', {
+                percentDone: `${String(percentDone).padStart(3, ' ')}`,
+                totalFramesWritten,
+                estimatedTotalFrames,
+                fromClipFrameAt,
+                toClipFrameAt,
+                transitionFromClipId,
+              });
         }
+        // }
 
         // console.log({ transitionFrameAt, transitionNumFramesSafe })
         // const transitionLastFrameIndex = transitionNumFramesSafe - 1;
@@ -300,10 +453,14 @@ async function Editly(config = {}) {
         // Done with transition?
         if (transitionFrameAt >= transitionLastFrameIndex) {
           transitionFromClipId += 1;
-          console.log(`Done with transition, switching to next transitionFromClip (${transitionFromClipId})`);
+          const msg = `Done with transition, switching to next transitionFromClip (${transitionFromClipId})`;
+          !events ? console.log(msg) : events.emit('data', msg);
 
           if (!getTransitionFromClip()) {
-            console.log('No more transitionFromClip, done');
+            const msg = 'No more transitionFromClip, done';
+            !events && console.log(msg);
+
+            events?.emit('data', msg);
             break;
           }
 
@@ -320,28 +477,43 @@ async function Editly(config = {}) {
         }
 
         if (logTimes) console.time('Read frameSource1');
-        const newFrameSource1Data = await frameSource1.readNextFrame({ time: fromClipTime });
+        const newFrameSource1Data = await frameSource1.readNextFrame({
+          time: fromClipTime,
+        });
         if (logTimes) console.timeEnd('Read frameSource1');
         // If we got no data, use the old data
         // TODO maybe abort?
         if (newFrameSource1Data) frameSource1Data = newFrameSource1Data;
         else console.warn('No frame data returned, using last frame');
 
-        const isInTransition = frameSource2 && transitionNumFramesSafe > 0 && transitionFrameAt >= 0;
+        const isInTransition =
+          frameSource2 && transitionNumFramesSafe > 0 && transitionFrameAt >= 0;
 
         let outFrameData;
 
         if (isInTransition) {
           if (logTimes) console.time('Read frameSource2');
-          const frameSource2Data = await frameSource2.readNextFrame({ time: toClipTime });
+          const frameSource2Data = await frameSource2.readNextFrame({
+            time: toClipTime,
+          });
           if (logTimes) console.timeEnd('Read frameSource2');
 
           if (frameSource2Data) {
             const progress = transitionFrameAt / transitionNumFramesSafe;
+            // @ts-ignore
             const easedProgress = currentTransition.easingFunction(progress);
 
             if (logTimes) console.time('runTransitionOnFrame');
-            outFrameData = runTransitionOnFrame({ fromFrame: frameSource1Data, toFrame: frameSource2Data, progress: easedProgress, transitionName: currentTransition.name, transitionParams: currentTransition.params });
+            // @ts-ignore
+            outFrameData = runTransitionOnFrame({
+              fromFrame: frameSource1Data,
+              toFrame: frameSource2Data,
+              progress: easedProgress,
+              // @ts-ignore
+              transitionName: currentTransition.name,
+              // @ts-ignore
+              transitionParams: currentTransition.params,
+            });
             if (logTimes) console.timeEnd('runTransitionOnFrame');
           } else {
             console.warn('Got no frame data from transitionToClip!');
@@ -354,8 +526,31 @@ async function Editly(config = {}) {
         }
 
         if (verbose) {
-          if (isInTransition) console.log('Writing frame:', totalFramesWritten, 'from clip', transitionFromClipId, `(frame ${fromClipFrameAt})`, 'to clip', getTransitionToClipId(), `(frame ${toClipFrameAt} / ${transitionNumFramesSafe})`, currentTransition.name, `${currentTransition.duration}s`);
-          else console.log('Writing frame:', totalFramesWritten, 'from clip', transitionFromClipId, `(frame ${fromClipFrameAt})`);
+          // @ts-ignore
+          if (isInTransition) {
+            const data =
+              'Writing frame:' +
+              totalFramesWritten +
+              'from clip' +
+              transitionFromClipId +
+              `(frame ${fromClipFrameAt})` +
+              'to clip' +
+              getTransitionToClipId() +
+              `(frame ${toClipFrameAt} / ${transitionNumFramesSafe})` +
+              // @ts-ignore
+              currentTransition.name +
+              `${currentTransition.duration}s`;
+            !events ? console.log(data) : events.emit('data', data);
+          } else {
+            const data =
+              'Writing frame: ' +
+              totalFramesWritten +
+              ' from clip ' +
+              transitionFromClipId +
+              ` (frame ${fromClipFrameAt})`;
+
+            !events ? console.log(data) : events.emit('data', data);
+          }
           // console.log(outFrameData.length / 1e6, 'MB');
         }
 
@@ -364,7 +559,8 @@ async function Editly(config = {}) {
         if (logTimes) console.time('outProcess.write');
 
         // If we don't wait, then we get EINVAL when dealing with high resolution files (big writes)
-        if (!nullOutput) await new Promise((r) => outProcess.stdin.write(outFrameData, r));
+        if (!nullOutput)
+          await new Promise((r) => outProcess.stdin.write(outFrameData, r));
 
         if (logTimes) console.timeEnd('outProcess.write');
 
@@ -375,9 +571,9 @@ async function Editly(config = {}) {
         if (isInTransition) toClipFrameAt += 1;
       } // End while loop
 
-      outProcess.stdin.end();
+      outProcess?.stdin?.end();
     } catch (err) {
-      outProcess.kill();
+      outProcess?.kill();
       throw err;
     } finally {
       if (verbose) console.log('Cleanup');
@@ -388,16 +584,23 @@ async function Editly(config = {}) {
     try {
       if (verbose) console.log('Waiting for output ffmpeg process to finish');
       await outProcess;
+      outProcess.killed;
     } catch (err) {
       if (outProcessExitCode !== 0 && !err.killed) throw err;
     }
   } finally {
     if (!keepTmp) await fsExtra.remove(tmpDir);
   }
-
-  console.log();
-  console.log('Done. Output file can be found at:');
-  console.log(outPath);
+  if (!events) {
+    console.log();
+    console.log('Done. Output file can be found at:');
+    console.log(outPath);
+  } else {
+    events.emit('end', 'Done. Output file can be found at: ' + outPath);
+  }
+}
+function sleep(ms = 1000) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // Pure function to get a frame at a certain time
@@ -417,7 +620,14 @@ async function renderSingleFrame({
   ffmpegPath = 'ffmpeg',
   outPath = `${Math.floor(Math.random() * 1e12)}.png`,
 }) {
-  const clips = await parseConfig({ defaults, clips: clipsIn, arbitraryAudio: [], allowRemoteRequests, ffprobePath });
+  // @ts-ignore
+  const clips = await parseConfig({
+    defaults,
+    clips: clipsIn,
+    arbitraryAudio: [],
+    allowRemoteRequests,
+    ffprobePath,
+  });
   let clipStartTime = 0;
   const clip = clips.find((c) => {
     if (clipStartTime <= time && clipStartTime + c.duration > time) return true;
@@ -426,7 +636,19 @@ async function renderSingleFrame({
   });
   assert(clip, 'No clip found at requested time');
   const clipIndex = clips.indexOf(clip);
-  const frameSource = await createFrameSource({ clip, clipIndex, width, height, channels, verbose, logTimes, ffmpegPath, ffprobePath, enableFfmpegLog, framerateStr: '1' });
+  const frameSource = await createFrameSource({
+    clip,
+    clipIndex,
+    width,
+    height,
+    channels,
+    verbose,
+    logTimes,
+    ffmpegPath,
+    ffprobePath,
+    enableFfmpegLog,
+    framerateStr: '1',
+  });
   const rgba = await frameSource.readNextFrame({ time: time - clipStartTime });
 
   // TODO converting rgba to png can be done more easily?

@@ -26,6 +26,7 @@ export function canvasToRgba(ctx) {
 export function getNodeCanvasFromFabricCanvas(fabricCanvas) {
   // https://github.com/fabricjs/fabric.js/blob/26e1a5b55cbeeffb59845337ced3f3f91d533d7d/src/static_canvas.class.js
   // https://github.com/fabricjs/fabric.js/issues/3885
+  // @ts-ignore
   return fabric.util.getNodeCanvas(fabricCanvas.lowerCanvasEl);
 }
 
@@ -74,15 +75,23 @@ export async function rgbaToFabricImage({ width, height, rgba }) {
   const ctx = canvas.getContext('2d');
   // https://developer.mozilla.org/en-US/docs/Web/API/ImageData/ImageData
   // https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/putImageData
-  ctx.putImageData(new ImageData(toUint8ClampedArray(rgba), width, height), 0, 0);
+  ctx.putImageData(
+    new ImageData(toUint8ClampedArray(rgba), width, height),
+    0,
+    0
+  );
   // https://stackoverflow.com/questions/58209996/unable-to-render-tiff-images-and-add-it-as-a-fabric-object
+  // @ts-ignore
   return new fabric.Image(canvas);
 }
 
-export async function createFabricFrameSource(func, { width, height, ...rest }) {
-  const onInit = async () => func(({ width, height, fabric, ...rest }));
+export async function createFabricFrameSource(
+  func,
+  { width, height, ...rest }
+) {
+  const onInit = async () => func({ width, height, fabric, ...rest });
 
-  const { onRender = () => {}, onClose = () => {} } = await onInit() || {};
+  const { onRender = () => {}, onClose = () => {} } = (await onInit()) || {};
 
   return {
     readNextFrame: onRender,
@@ -94,7 +103,7 @@ export async function createCustomCanvasFrameSource({ width, height, params }) {
   const canvas = createCanvas(width, height);
   const context = canvas.getContext('2d');
 
-  const { onClose, onRender } = await params.func(({ width, height, canvas }));
+  const { onClose, onRender } = await params.func({ width, height, canvas });
 
   async function readNextFrame(progress) {
     context.clearRect(0, 0, canvas.width, canvas.height);
@@ -112,11 +121,15 @@ export async function createCustomCanvasFrameSource({ width, height, params }) {
 }
 
 export function registerFont(...args) {
+  // @ts-ignore
   fabric.nodeCanvas.registerFont(...args);
 }
 
 export async function blurImage({ mutableImg, width, height }) {
-  mutableImg.setOptions({ scaleX: width / mutableImg.width, scaleY: height / mutableImg.height });
+  mutableImg.setOptions({
+    scaleX: width / mutableImg.width,
+    scaleY: height / mutableImg.height,
+  });
 
   const fabricCanvas = createFabricCanvas({ width, height });
   fabricCanvas.add(mutableImg);
