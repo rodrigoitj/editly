@@ -1093,4 +1093,4 @@ declare namespace Editly {
   function renderSingleFrame(config: RenderSingleFrameConfig): Promise<void>;
 }
 
-export = Editly;
+export default Editly;

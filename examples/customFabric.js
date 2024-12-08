@@ -127,11 +127,11 @@ events.on('data', (data) => {
 events.on('progress', ({ percentDone }) => {
   percentDone && console.log(chalk.green(percentDone + '%'));
 });
-events.on('end', (end) => {
-  console.log(chalk.blue(end));
-});
 events.on('exit', (code) => {
   console.log(chalk.red(code));
+});
+events.on('end', (end) => {
+  console.log(chalk.blue(end));
 });
 editly(
   {
