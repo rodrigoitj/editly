@@ -10,7 +10,7 @@ module.exports = {
     'import/extensions': ['.js'],
   },
   rules: {
-    'operator-line-brake':"none",
+    'operator-line-brake': 'none',
     'eol-last': 0,
     'linebreak-style': 0,
     '@stylistic/linebreak-style': [0, 'windows'],
@@ -20,5 +20,7 @@ module.exports = {
     'no-await-in-loop': 0,
     'no-promise-executor-return': 0,
     'import/extensions': ['error', 'ignorePackages'],
+    '@typescript-eslint/no-explicit-any': 'off',
+    '@typescript-eslint/explicit-module-boundary-types': 'off',
   },
 };

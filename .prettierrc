@@ -2,5 +2,18 @@
   "tabWidth": 2,
   "useTabs": false,
   "endOfLine": "crlf",
-  "singleQuote": true
+  "singleQuote": true,
+  "quoteProps": "preserve",
+  "trailingComma": "es5",
+  "overrides": [
+    {
+      "files": "*.json5",
+      "options": {
+        "tabWidth": 4,
+        "singleQuote": false,
+        "useTabs": true,
+        "trailingComma": "none"
+      }
+    }
+  ]
 }
