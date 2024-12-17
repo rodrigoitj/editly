@@ -234,7 +234,7 @@ export default async ({
       stream?.resume();
     });
 
-    if (!rgba) return;
+    if (!rgba.length) return;
 
     assert(rgba.length === frameByteSize);
 
