@@ -1,0 +1,102 @@
+{
+	"width": 720,
+	"height": 1080,
+	"outPath": "./image2.mp4",
+	"allowRemoteRequests": true,
+	"defaults": {
+		"transition": null,
+		"duration": 2
+	},
+	"clips": [
+		{
+			"duration": 2.5,
+			"transition": {
+				"name": "directionalWarp"
+			},
+			"layers": [
+				{
+					"type": "image",
+					"path": "https://atleticomg.net/wp-content/uploads/2024/12/wordpress-2-6-1024x576.jpg",
+					"zoomDirection": "out"
+				}
+			]
+		},
+		{
+			"duration": 2.5,
+			"layers": [
+				{
+					"type": "image",
+					"path": "https://appwrite.correa.dev/v1/storage/buckets/6742b0a700069fb58205/files/675b290e003d8e478777/view?project=video-automation&project=video-automation&mode=admin"
+				}
+			]
+		},
+		{
+			"duration": 2.5,
+			"layers": [
+				{
+					"type": "fill-color",
+					"color": "white"
+				},
+				{
+					"type": "image",
+					"path": "https://appwrite.correa.dev/v1/storage/buckets/6742b0a700069fb58205/files/675b2914003a3e9ccd64/view?project=video-automation&project=video-automation&mode=admin",
+					"resizeMode": "contain"
+				}
+			]
+		},
+		{
+			"duration": 2.5,
+			"layers": [
+				{
+					"type": "fill-color",
+					"color": "white"
+				},
+				{
+					"type": "image",
+					"path": "https://appwrite.correa.dev/v1/storage/buckets/6742b0a700069fb58205/files/675b291b00056b8a16d3/view?project=video-automation&project=video-automation&mode=admin",
+					"resizeMode": "contain"
+				}
+			]
+		},
+		{
+			"duration": 2.5,
+			"layers": [
+				{
+					"type": "image",
+					"path": "https://appwrite.correa.dev/v1/storage/buckets/6742b0a700069fb58205/files/675b291b00056b8a16d3/view?project=video-automation&project=video-automation&mode=admin",
+					"resizeMode": "cover"
+				}
+			]
+		},
+		{
+			"duration": 2.5,
+			"layers": [
+				{
+					"type": "image",
+					"path": "https://appwrite.correa.dev/v1/storage/buckets/6742b0a700069fb58205/files/675b2927000bd8643927/view?project=video-automation&project=video-automation&mode=admin",
+					"resizeMode": "cover"
+				}
+			]
+		},
+		{
+			"duration": 2.5,
+			"layers": [
+				{
+					"type": "image",
+					"path": "https://appwrite.correa.dev/v1/storage/buckets/6742b0a700069fb58205/files/675b292b0036c45a9283/view?project=video-automation&project=video-automation&mode=admin",
+					"resizeMode": "stretch"
+				}
+			]
+		},
+		{
+			"duration": 2.5,
+			"layers": [
+				{
+					"type": "image",
+					"path": "https://appwrite.correa.dev/v1/storage/buckets/6742b0a700069fb58205/files/675b290e003d8e478777/view?project=video-automation&project=video-automation&mode=admin",
+					"resizeMode": "stretch"
+				}
+			]
+		}
+	]
+}
