@@ -302,12 +302,12 @@ export async function imageOverlayFrameSource({ params, width, height }) {
   async function onRender(progress, canvas) {
     const scaleFactor = getZoomParams({ progress, zoomDirection, zoomAmount });
 
-    const translationParams = getTranslationParams({
-      progress,
-      zoomDirection,
-      zoomAmount,
-    });
-    img.left = width / 2 + translationParams;
+    // const translationParams = getTranslationParams({
+    //   progress,
+    //   zoomDirection,
+    //   zoomAmount,
+    // });
+    // img.left = width / 2 + translationParams;
 
     if (relWidth != null) {
       img.scaleToWidth(relWidth * width * scaleFactor);
