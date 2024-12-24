@@ -78,7 +78,7 @@ export default async function parseConfig({
       [
         'image',
         'image-overlay',
-        'fabric',
+        // 'fabric',
         'canvas',
         'gl',
         'radial-gradient',
@@ -155,8 +155,12 @@ export default async function parseConfig({
       return outLayers;
     }
 
-    if (['title', 'subtitle', 'news-title', 'slide-in-text'].includes(type)) {
-      assert(layer.text, 'Please specify a text');
+    if (
+      ['title', 'subtitle', 'news-title', 'slide-in-text', 'fabric'].includes(
+        type
+      )
+    ) {
+      type !== 'fabric' && assert(layer.text, 'Please specify a text');
 
       let { fontFamily } = layer;
       const { fontPath, ...rest } = layer;
